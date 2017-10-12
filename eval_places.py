@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from model.cnn_geometric_model import CNNGeometric
 from data.pf_dataset import PFDataset
+from data.places_dataset import PlacesDataset
 from data.download_datasets import download_PF_willow
 from image.normalization import NormalizeImageDict
 from util.torch_util import BatchTensorToVars, str_to_bool
@@ -28,18 +29,18 @@ parser = argparse.ArgumentParser(description='CNNGeometric PyTorch implementatio
 # Paths
 parser.add_argument('--model-aff', type=str, default='trained_models/best_checkpoint_adam_affine_grid_loss.pth.tar', help='Trained affine model filename')
 parser.add_argument('--model-tps', type=str, default='trained_models/best_checkpoint_adam_tps_grid_loss.pth.tar', help='Trained TPS model filename')
-parser.add_argument('--pf-path', type=str, default='datasets/PF-dataset', help='Path to PF dataset')
+parser.add_argument('--path', type=str, default='datasets/PF-dataset', help='Path to PF dataset')
+parser.add_argument('--pairs', type=str, default='Pairs CSV file', help='Path to PF dataset')
 
 args = parser.parse_args()
 
 use_cuda = torch.cuda.is_available()
 
 do_aff = not args.model_aff==''
-do_tps = False#not args.model_tps==''
+do_tps = not args.model_tps==''
 
-# Download dataset if needed
-download_PF_willow('datasets/')
-
+dataset_path=args.path
+dataset_pairs_file = args.pairs
 # Create model
 print('Creating CNN model...')
 if do_aff:
@@ -57,9 +58,10 @@ if do_tps:
     model_tps.load_state_dict(checkpoint['state_dict'])
 
 # Dataset and dataloader
-dataset = PFDataset(csv_file=os.path.join(args.pf_path, 'test_pairs_pf.csv'),
-                    training_image_path=args.pf_path,
+dataset = PlacesDataset(csv_file=dataset_pairs_file,
+                    training_image_path=dataset_path,
                     transform=NormalizeImageDict(['source_image','target_image']))
+
 if use_cuda:
     batch_size=16
 else:
