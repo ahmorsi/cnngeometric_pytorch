@@ -93,12 +93,14 @@ class CNNGeometric(nn.Module):
             feature_B = self.FeatureL2Norm(feature_B)
         # do feature correlation
         correlation = self.FeatureCorrelation(feature_A,feature_B)
+        correlation_BA = self.FeatureCorrelation(feature_B, feature_A)
         # normalize
         if self.normalize_matches:
             correlation = self.FeatureL2Norm(self.ReLU(correlation))
+            correlation_BA = self.FeatureL2Norm(self.ReLU(correlation_BA))
 #        correlation = self.FeatureL2Norm(correlation)
         # do regression to tnf parameters theta
         theta = self.FeatureRegression(correlation)
 
-        return theta
+        return theta,correlation,correlation_BA
     
