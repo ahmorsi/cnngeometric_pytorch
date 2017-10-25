@@ -5,20 +5,25 @@ from torch.autograd import Variable
 import torchvision.models as models
 
 class FeatureExtraction(torch.nn.Module):
-    def __init__(self, use_cuda=True):
+    def __init__(self, use_cuda=True,arch='resnet18'):
         super(FeatureExtraction, self).__init__()
-        self.vgg = models.vgg16(pretrained=True)
-        # keep feature extraction network up to pool4 (last layer - 7)
-        self.vgg = nn.Sequential(*list(self.vgg.features.children())[:-7])
+
+        if arch is 'vgg16':
+            self.nn = models.vgg16(pretrained=True)
+            # keep feature extraction network up to pool4 (last layer - 7)
+            self.nn = nn.Sequential(*list(self.nn.features.children())[:-7])
+        elif arch is 'resnet18':
+            self.nn = models.resnet18(pretrained=True)
+            self.nn = nn.Sequential(*list(self.nn.children())[:-4])
         # freeze parameters
-        for param in self.vgg.parameters():
+        for param in self.nn.parameters():
             param.requires_grad = False
         # move to GPU
         if use_cuda:
-            self.vgg.cuda()
+            self.nn.cuda()
         
     def forward(self, image_batch):
-        return self.vgg(image_batch)
+        return self.nn(image_batch)
     
 class FeatureL2Norm(torch.nn.Module):
     def __init__(self):
@@ -46,10 +51,10 @@ class FeatureCorrelation(torch.nn.Module):
         return correlation_tensor
     
 class FeatureRegression(nn.Module):
-    def __init__(self, output_dim=6, use_cuda=True):
+    def __init__(self, input_dim=225,output_dim=6, use_cuda=True):
         super(FeatureRegression, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(225, 128, kernel_size=7, padding=0),
+            nn.Conv2d(input_dim, 128, kernel_size=7, padding=0),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
             nn.Conv2d(128, 64, kernel_size=5, padding=0),
@@ -80,7 +85,7 @@ class CNNGeometric(nn.Module):
             output_dim = 6
         elif geometric_model=='tps':
             output_dim = 18
-        self.FeatureRegression = FeatureRegression(output_dim,use_cuda=self.use_cuda)
+        self.FeatureRegression = FeatureRegression(input_dim=64,output_dim=output_dim,use_cuda=self.use_cuda)
         self.ReLU = nn.ReLU(inplace=True)
 
     def forward(self, tnf_batch):
