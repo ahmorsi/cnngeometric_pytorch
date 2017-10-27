@@ -5,25 +5,26 @@ from torch.autograd import Variable
 import torchvision.models as models
 
 class FeatureExtraction(torch.nn.Module):
-    def __init__(self, use_cuda=True,arch='resnet18'):
+    def __init__(self, use_cuda=True,arch='vgg16'):
         super(FeatureExtraction, self).__init__()
 
-        if arch is 'vgg16':
-            self.nn = models.vgg16(pretrained=True)
+        if arch == 'vgg16':
+            self.vgg = models.vgg16(pretrained=True)
             # keep feature extraction network up to pool4 (last layer - 7)
-            self.nn = nn.Sequential(*list(self.nn.features.children())[:-7])
-        elif arch is 'resnet18':
-            self.nn = models.resnet18(pretrained=True)
-            self.nn = nn.Sequential(*list(self.nn.children())[:-4])
+            self.vgg = nn.Sequential(*list(self.vgg.features.children())[:-7])
+        # elif arch == 'resnet18':
+        #     self.nn = models.resnet18(pretrained=True)
+        #     # keep feature extraction network up to add_8 (last layer - 3)
+        #     self.nn = nn.Sequential(*list(self.nn.children())[:-3])
         # freeze parameters
-        for param in self.nn.parameters():
+        for param in self.vgg.parameters():
             param.requires_grad = False
         # move to GPU
         if use_cuda:
-            self.nn.cuda()
+            self.vgg.cuda()
         
     def forward(self, image_batch):
-        return self.nn(image_batch)
+        return self.vgg(image_batch)
     
 class FeatureL2Norm(torch.nn.Module):
     def __init__(self):
@@ -71,7 +72,39 @@ class FeatureRegression(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.linear(x)
         return x
+class CNNGeometric_Regression(nn.Module):
+    def __init__(self, geometric_model='affine', normalize_matches=True,
+                 batch_normalization=True, use_cuda=True):
+        super(CNNGeometric_Regression, self).__init__()
+        self.use_cuda = use_cuda
+        self.normalize_matches = normalize_matches
+        #self.FeatureExtraction = FeatureExtraction(use_cuda=self.use_cuda, arch='resnet18')
+        #self.FeatureL2Norm = FeatureL2Norm()
+        self.FeatureCorrelation = FeatureCorrelation()
+        if geometric_model == 'affine':
+            output_dim = 6
+        elif geometric_model == 'tps':
+            output_dim = 18
+        self.FeatureRegression = FeatureRegression(output_dim=output_dim, use_cuda=self.use_cuda)
+        self.ReLU = nn.ReLU(inplace=True)
 
+    def forward(self, features):
+        # do feature extraction
+        feature_A,feature_B = features#self.FeatureExtraction(tnf_batch['source_image'])
+        #feature_B = self.FeatureExtraction(tnf_batch['target_image'])
+
+        # do feature correlation
+        correlation = self.FeatureCorrelation(feature_A, feature_B)
+        correlation_BA = self.FeatureCorrelation(feature_B, feature_A)
+        # normalize
+        if self.normalize_matches:
+            correlation = self.FeatureL2Norm(self.ReLU(correlation))
+            correlation_BA = self.FeatureL2Norm(self.ReLU(correlation_BA))
+            #        correlation = self.FeatureL2Norm(correlation)
+        # do regression to tnf parameters theta
+        theta = self.FeatureRegression(correlation)
+
+        return theta, correlation, correlation_BA
 class CNNGeometric(nn.Module):
     def __init__(self, geometric_model='affine', normalize_features=True, normalize_matches=True, batch_normalization=True, use_cuda=True):
         super(CNNGeometric, self).__init__()
@@ -85,7 +118,7 @@ class CNNGeometric(nn.Module):
             output_dim = 6
         elif geometric_model=='tps':
             output_dim = 18
-        self.FeatureRegression = FeatureRegression(input_dim=64,output_dim=output_dim,use_cuda=self.use_cuda)
+        self.FeatureRegression = FeatureRegression(output_dim=output_dim,use_cuda=self.use_cuda)
         self.ReLU = nn.ReLU(inplace=True)
 
     def forward(self, tnf_batch):

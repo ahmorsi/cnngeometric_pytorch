@@ -9,13 +9,13 @@ from data.pf_dataset import PFDataset
 from data.places_dataset import PlacesDataset
 from data.download_datasets import download_PF_willow
 from image.normalization import NormalizeImageDict
-from util.torch_util import BatchTensorToVars, str_to_bool
+from util.torch_util import BatchTensorToVars, str_to_bool,correct_keypoints
 from util.cv_util import find_mutual_matached_keypoints,estimateAffineRansac,tensorPointstoPixels
 from geotnf.point_tnf import *
 from geotnf.transformation import GeometricTnf
 from torch.autograd import Variable
 import cv2
-
+import math
 
 """
 
@@ -40,7 +40,7 @@ use_cuda = torch.cuda.is_available()
 
 do_aff = not args.model_aff==''
 do_tps = False#not args.model_tps==''
-do_ransac = True
+do_ransac = False
 dataset_path=args.path
 dataset_pairs_file = args.pairs
 # Create model
@@ -80,17 +80,6 @@ pt = PointTnf(use_cuda=use_cuda)
 # Instatiate image transformers
 tpsTnf = GeometricTnf(geometric_model='tps',use_cuda=use_cuda)
 affTnf = GeometricTnf(geometric_model='affine',use_cuda=use_cuda)
-
-# Compute PCK
-def correct_keypoints(source_points,warped_points,L_pck,alpha=0.1):
-    # compute correct keypoints
-    point_distance = torch.pow(torch.sum(torch.pow(source_points-warped_points,2),1),0.5).squeeze(1)
-    L_pck_mat = L_pck.expand_as(point_distance)
-    correct_points = torch.le(point_distance,L_pck_mat*alpha)
-    num_of_correct_points = torch.sum(correct_points)
-    num_of_points = correct_points.numel()
-    return (num_of_correct_points,num_of_points)
-
 
 print('Computing PCK...')
 total_correct_points_aff = 0
@@ -136,7 +125,8 @@ for i, batch in enumerate(dataloader):
     #         #print(source_points_np)
     if do_aff:
         theta_aff,correlationAB,correlationBA =model_aff(batch)
-
+        keypoints_A, keypoints_B = find_mutual_matached_keypoints(correlationAB, correlationBA)
+        print('Mutual Keypoints: ',keypoints_A.shape[0])
         # do affine only
         warped_points_aff_norm = pt.affPointTnf(theta_aff,target_points_norm)
         warped_points_aff = PointsToPixelCoords(warped_points_aff_norm,source_im_size)
@@ -187,28 +177,29 @@ for i, batch in enumerate(dataloader):
     L_pck = batch['L_pck'].data
 
     if do_ransac and ransac_success:
-        correct_points_ransac, num_points = correct_keypoints(source_points.data,
+        correct_points_ransac, num_points,reprojection_error = correct_keypoints(source_points.data,
                                                            warped_points_ransac.data, L_pck)
         print(correct_points_ransac)
         total_correct_points_ransac += correct_points_ransac
 
     if do_aff:
-        correct_points_aff, num_points = correct_keypoints(source_points.data,
+        correct_points_aff, num_points,reprojection_error = correct_keypoints(source_points.data,
                                                        warped_points_aff.data,L_pck)
+        print('Reprojection error: ', reprojection_error)
         total_correct_points_aff += correct_points_aff
         
     if do_tps:
-        correct_points_tps, num_points = correct_keypoints(source_points.data,
+        correct_points_tps, num_points,reprojection_error = correct_keypoints(source_points.data,
                                                            warped_points_tps.data,L_pck)
         total_correct_points_tps += correct_points_tps
 
     if do_aff and do_tps:
-        correct_points_aff_tps, num_points = correct_keypoints(source_points.data,
+        correct_points_aff_tps, num_points,reprojection_error = correct_keypoints(source_points.data,
                                                            warped_points_aff_tps.data,L_pck)
         total_correct_points_aff_tps += correct_points_aff_tps        
 
     total_points += num_points
-       
+    print("============")
     print('Batch: [{}/{} ({:.0f}%)]'.format(i, len(dataloader), 100. * i / len(dataloader)))
 
 if do_ransac:
