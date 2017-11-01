@@ -6,7 +6,7 @@ def train(epoch,model,loss_fn,optimizer,dataloader,pair_generation_tnf,use_cuda=
     for batch_idx, batch in enumerate(dataloader):
         optimizer.zero_grad()
         tnf_batch = pair_generation_tnf(batch)
-        theta = model(tnf_batch)
+        theta,_,_ = model(tnf_batch)
         loss = loss_fn(theta,tnf_batch['theta_GT'])
         loss.backward()
         optimizer.step()
@@ -24,7 +24,7 @@ def test(model,loss_fn,dataloader,pair_generation_tnf,use_cuda=True):
     test_loss = 0
     for batch_idx, batch in enumerate(dataloader):
         tnf_batch = pair_generation_tnf(batch)
-        theta = model(tnf_batch)
+        theta,_,_ = model(tnf_batch)
         loss = loss_fn(theta,tnf_batch['theta_GT'])
         test_loss += loss.data.cpu().numpy()[0]
 

@@ -36,7 +36,7 @@ class CNNGeometricMatcher:
 
         if num_mutual_keypoints < self.min_mutual_keypoints:
             matched = False
-            reprojection_error = None
+            reprojection_error = -1
         else:
             source_im_size = batch['source_im_size']
             target_im_size = batch['target_im_size']
@@ -53,7 +53,11 @@ class CNNGeometricMatcher:
 
             torch_keypointsA_var = Variable(torch.Tensor(im_keypointsA.reshape(1, 2, -1).astype(np.float32)))
             torch_keypointsB_var = Variable(torch.Tensor(im_keypointsB.reshape(1, 2, -1).astype(np.float32)))
-            warped_points_aff = self.pt.affPointTnf(theta_aff, torch_keypointsB_var)
+
+            target_points_norm = PointsToUnitCoords(torch_keypointsB_var, target_im_size)
+
+            warped_points_aff_norm = self.pt.affPointTnf(theta_aff, target_points_norm)
+            warped_points_aff = PointsToPixelCoords(warped_points_aff_norm, source_im_size)
             reprojection_error = compute_reprojection_error(torch_keypointsA_var, warped_points_aff)
             matched = reprojection_error <= self.min_reprojection_error
         return reprojection_error, matched, num_mutual_keypoints
@@ -90,15 +94,15 @@ if __name__ == "__main__":
                         default='trained_models/best_streetview_checkpoint_adam_tps_grid_loss.pth.tar',
                         help='Trained TPS model filename')
     parser.add_argument('--imgA', type=str,
-                        default='/home/develop/Work/Datasets/GardensPointWalking/night_right/Image005.jpg',
+                        default='/home/develop/Work/Datasets/GardensPointWalking/day_left/Image005.jpg',
                         help='Path to Source Image')
     parser.add_argument('--imgB', type=str,
-                        default='/home/develop/Work/Datasets/GardensPointWalking/day_right/Image020.jpg',
+                        default='/home/develop/Work/Datasets/GardensPointWalking/day_right/Image001.jpg',
                         help='Path to Target Image')
     args = parser.parse_args()
 
     matcher = CNNGeometricMatcher(use_cuda=__use_cuda, geometric_model='affine', model_path=args.model_aff,
-                                  min_mutual_keypoints=4)
+                                  min_mutual_keypoints=4,min_reprojection_error=150)
 
     batch = read_input(path_imgA=args.imgA, path_imgB=args.imgB)
     reprojection_error, matched, num_mutual_keypoints = matcher.run(batch)
