@@ -42,7 +42,8 @@ parser.add_argument('--seed', type=int, default=1, help='Pseudo-RNG seed')
 # Model parameters
 parser.add_argument('--geometric-model', type=str, default='affine', help='geometric model to be regressed at output: affine or tps')
 parser.add_argument('--use-mse-loss', type=str_to_bool, nargs='?', const=True, default=False, help='Use MSE loss on tnf. parameters')
-
+parser.add_argument('--arch','-a',metavar='ARCH',default='resnet18',help='model architecture')
+parser.add_argument('--fw',type=str,help='Path for Feature Extractor Weights')
 args = parser.parse_args()
 
 use_cuda = torch.cuda.is_available()
@@ -65,7 +66,7 @@ if args.training_dataset == 'pascal':
 # CNN model and loss
 print('Creating CNN model...')
 
-model = CNNGeometric(use_cuda=use_cuda,geometric_model=args.geometric_model)
+model = CNNGeometric(use_cuda=use_cuda,geometric_model=args.geometric_model,arch=args.arch,featext_weights=args.fw)
 
 if args.use_mse_loss:
     print('Using MSE loss...')

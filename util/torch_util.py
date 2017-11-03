@@ -5,6 +5,7 @@ from os import makedirs, remove
 from os.path import exists, join, basename, dirname
 import numpy as np
 from skimage import io
+from collections import OrderedDict
 
 class BatchTensorToVars(object):
     """Convert tensors in dict batch to vars
@@ -74,3 +75,11 @@ def compute_reprojection_error(source_points,warped_points):
     point_distance = torch.pow(torch_sum, 0.5).squeeze(1)
     mse = torch.mean(point_distance.data)
     return mse
+
+def convertGpuWeightsToCpu(weights_path):
+    checkpoint = torch.load(weights_path, map_location=lambda storage, loc: storage)
+    new_state_dict = OrderedDict()
+    for k, v in checkpoint['state_dict'].items():
+        name = k[7:]  # remove `module.`
+        new_state_dict[name] = v
+    return new_state_dict
