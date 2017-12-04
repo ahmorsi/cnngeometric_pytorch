@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 from model.cnn_geometric_model import CNNGeometric
 from model.loss import TransformedGridLoss
 from data.synth_dataset import SynthDataset
+from data.pose_dataset import PoseDataset
 from data.download_datasets import download_pascal
 from geotnf.transformation import SynthPairTnf
 from image.normalization import NormalizeImageDict
@@ -76,25 +77,37 @@ else:
     loss = TransformedGridLoss(use_cuda=use_cuda,geometric_model=args.geometric_model)
 
 
+if args.geometric_model == 'pose':
+    dataset = PoseDataset(
+        geometric_model=args.geometric_model,
+        csv_file=os.path.join(args.training_tnf_csv, 'train.csv'),
+        training_image_path=args.training_image_path,
+        transform=NormalizeImageDict(['source_image','target_image'])
+    )
+    dataset_test = PoseDataset(geometric_model=args.geometric_model,
+                            csv_file=os.path.join(args.training_tnf_csv,'test.csv'),
+                            training_image_path=args.training_image_path,
+                            transform=NormalizeImageDict(['source_image','target_image']))
 # Dataset and dataloader
-dataset = SynthDataset(geometric_model=args.geometric_model,
+else:
+    dataset = SynthDataset(geometric_model=args.geometric_model,
                        csv_file=os.path.join(args.training_tnf_csv,'train.csv'),
                        training_image_path=args.training_image_path,
                        transform=NormalizeImageDict(['image']))
 
-dataloader = DataLoader(dataset, batch_size=args.batch_size,
-                        shuffle=True, num_workers=4)
 
-dataset_test = SynthDataset(geometric_model=args.geometric_model,
+    dataset_test = SynthDataset(geometric_model=args.geometric_model,
                             csv_file=os.path.join(args.training_tnf_csv,'test.csv'),
                             training_image_path=args.training_image_path,
                             transform=NormalizeImageDict(['image']))
 
+dataloader = DataLoader(dataset, batch_size=args.batch_size,
+                        shuffle=True, num_workers=4)
 dataloader_test = DataLoader(dataset_test, batch_size=args.batch_size,
                         shuffle=True, num_workers=4)
 
 
-pair_generation_tnf = SynthPairTnf(geometric_model=args.geometric_model,use_cuda=use_cuda)
+pair_generation_tnf = SynthPairTnf(geometric_model=args.geometric_model,use_cuda=use_cuda) if args.geometric_model != 'pose' else None
 
 # Optimizer
 optimizer = optim.Adam(model.FeatureRegression.parameters(), lr=args.lr)

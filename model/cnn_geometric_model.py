@@ -11,9 +11,9 @@ class FeatureExtraction(torch.nn.Module):
         super(FeatureExtraction, self).__init__()
 
         if arch == 'vgg16':
-            self.vgg = models.vgg16(pretrained=True)
+            self.model = models.vgg16(pretrained=True)
             # keep feature extraction network up to pool4 (last layer - 7)
-            self.vgg = nn.Sequential(*list(self.vgg.features.children())[:-7])
+            self.model = nn.Sequential(*list(self.model.features.children())[:-7])
         elif arch == 'resnet18':
             imageNet = weights is None
             self.model = models.resnet18(pretrained=imageNet)
@@ -90,6 +90,8 @@ class CNNGeometric(nn.Module):
             output_dim = 6
         elif geometric_model=='tps':
             output_dim = 18
+        elif geometric_model == 'pose':
+            output_dim = 7
 
         if arch == 'resnet18':
             input_dim = 225
@@ -134,6 +136,8 @@ class CNNGeometricRegression(nn.Module):
             output_dim = 6
         elif geometric_model=='tps':
             output_dim = 18
+        elif geometric_model == 'pose':
+            output_dim = 12
 
         if arch == 'resnet18':
             input_dim = 225
