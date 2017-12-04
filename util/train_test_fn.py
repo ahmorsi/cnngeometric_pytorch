@@ -1,11 +1,12 @@
 from __future__ import print_function, division
-
+from torch_util import BatchTensorToVars
 def train(epoch,model,loss_fn,optimizer,dataloader,pair_generation_tnf=None,use_cuda=True,log_interval=50):
     model.train()
     train_loss = 0
+    batchTensorToVars = BatchTensorToVars(use_cuda=use_cuda)
     for batch_idx, batch in enumerate(dataloader):
         optimizer.zero_grad()
-        tnf_batch = pair_generation_tnf(batch) if pair_generation_tnf is not None else batch
+        tnf_batch = pair_generation_tnf(batch) if pair_generation_tnf is not None else batchTensorToVars(batch)
         theta,_,_ = model(tnf_batch)
         loss = loss_fn(theta,tnf_batch['theta_GT'])
         loss.backward()
@@ -22,8 +23,9 @@ def train(epoch,model,loss_fn,optimizer,dataloader,pair_generation_tnf=None,use_
 def test(model,loss_fn,dataloader,pair_generation_tnf,use_cuda=True):
     model.eval()
     test_loss = 0
+    batchTensorToVars = BatchTensorToVars(use_cuda=use_cuda)
     for batch_idx, batch in enumerate(dataloader):
-        tnf_batch = pair_generation_tnf(batch) if pair_generation_tnf is not None else batch
+        tnf_batch = pair_generation_tnf(batch) if pair_generation_tnf is not None else batchTensorToVars(batch)
         theta,_,_ = model(tnf_batch)
         loss = loss_fn(theta,tnf_batch['theta_GT'])
         test_loss += loss.data.cpu().numpy()[0]
