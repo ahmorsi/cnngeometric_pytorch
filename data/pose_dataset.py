@@ -66,7 +66,7 @@ class PoseDataset(Dataset):
 
         # permute order of image to CHW
         image_src = image_src.transpose(1, 2).transpose(0, 1)
-        image_target = image_src.transpose(1, 2).transpose(0, 1)
+        image_target = image_target.transpose(1, 2).transpose(0, 1)
 
         # Resize image using bilinear sampling with identity affine tnf
         if image_src.size()[0] != self.out_h or image_src.size()[1] != self.out_w:
