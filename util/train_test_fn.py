@@ -23,7 +23,7 @@ def test(model,loss_fn,dataloader,pair_generation_tnf,use_cuda=True):
     model.eval()
     test_loss = 0
     for batch_idx, batch in enumerate(dataloader):
-        tnf_batch = pair_generation_tnf(batch)
+        tnf_batch = pair_generation_tnf(batch) if pair_generation_tnf is not None else batch
         theta,_,_ = model(tnf_batch)
         loss = loss_fn(theta,tnf_batch['theta_GT'])
         test_loss += loss.data.cpu().numpy()[0]
