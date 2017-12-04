@@ -82,11 +82,13 @@ if args.geometric_model == 'pose':
         geometric_model=args.geometric_model,
         csv_file=os.path.join(args.training_tnf_csv, 'train.csv'),
         training_image_path=args.training_image_path,
+        output_size=(240, 240),
         transform=NormalizeImageDict(['source_image','target_image'])
     )
     dataset_test = PoseDataset(geometric_model=args.geometric_model,
                             csv_file=os.path.join(args.training_tnf_csv,'test.csv'),
                             training_image_path=args.training_image_path,
+                            output_size=(240, 240),
                             transform=NormalizeImageDict(['source_image','target_image']))
 # Dataset and dataloader
 else:
