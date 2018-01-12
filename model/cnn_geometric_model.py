@@ -91,7 +91,7 @@ class CNNGeometric(nn.Module):
         elif geometric_model=='tps':
             output_dim = 18
         elif geometric_model == 'pose':
-            output_dim = 12
+            output_dim = 6#12
 
         if arch == 'resnet18':
             input_dim = 225
@@ -137,7 +137,7 @@ class CNNGeometricRegression(nn.Module):
         elif geometric_model=='tps':
             output_dim = 18
         elif geometric_model == 'pose':
-            output_dim = 12
+            output_dim = 6#12
 
         if arch == 'resnet18':
             input_dim = 225

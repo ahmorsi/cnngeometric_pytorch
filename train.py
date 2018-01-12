@@ -40,6 +40,7 @@ parser.add_argument('--num-epochs', type=int, default=10, help='number of traini
 parser.add_argument('--batch-size', type=int, default=16, help='training batch size')
 parser.add_argument('--weight-decay', type=float, default=0, help='weight decay constant')
 parser.add_argument('--seed', type=int, default=1, help='Pseudo-RNG seed')
+parser.add_argument('--workers','-w', type=int, default=4, help='Number of Workers')
 # Model parameters
 parser.add_argument('--geometric-model', type=str, default='affine', help='geometric model to be regressed at output: affine or tps')
 parser.add_argument('--use-mse-loss', type=str_to_bool, nargs='?', const=True, default=False, help='Use MSE loss on tnf. parameters')
@@ -104,9 +105,9 @@ else:
                             transform=NormalizeImageDict(['image']))
 
 dataloader = DataLoader(dataset, batch_size=args.batch_size,
-                        shuffle=True, num_workers=4)
+                        shuffle=True, num_workers=args.workers)
 dataloader_test = DataLoader(dataset_test, batch_size=args.batch_size,
-                        shuffle=True, num_workers=4)
+                        shuffle=True, num_workers=args.workers)
 
 
 pair_generation_tnf = SynthPairTnf(geometric_model=args.geometric_model,use_cuda=use_cuda) if args.geometric_model != 'pose' else None

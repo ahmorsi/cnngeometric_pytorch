@@ -41,8 +41,8 @@ class PlacesDataset(Dataset):
 
     def __getitem__(self, idx):
         # get pre-processed images
-        image_A, im_size_A = self.get_image(self.img_A_names, idx)
-        image_B, im_size_B = self.get_image(self.img_B_names, idx)
+        image_A, im_size_A,source_im_path = self.get_image(self.img_A_names, idx)
+        image_B, im_size_B,target_im_path = self.get_image(self.img_B_names, idx)
 
         # # get pre-processed point coords
         point_A_coords = self.get_points(self.point_A_coords, idx)
@@ -61,7 +61,7 @@ class PlacesDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
 
-        return sample
+        return source_im_path,target_im_path,sample
 
     def get_image(self, img_name_list, idx):
         img_name = os.path.join(self.training_image_path, img_name_list[idx])
@@ -80,7 +80,7 @@ class PlacesDataset(Dataset):
 
         im_size = torch.Tensor(im_size.astype(np.float32))
 
-        return (image, im_size)
+        return image, im_size,img_name
 
     def get_points(self, point_coords_list, idx):
         point_coords = point_coords_list[idx, :].reshape(2, self.num_of_points)
